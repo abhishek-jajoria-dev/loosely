@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="paper">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loosely — turn any string into JSON</title>
+<meta name="description" content="Paste anything, get valid JSON. Format, minify, filter, export, and keep a history of everything you've parsed.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>{}</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* Everything — style, markup, script — lives in this one file on purpose:
+   nothing to misplace when you move or deploy it. */
+
+/* ---------- Theme tokens (12 themes, switch with the dropdown) ---------- */
+:root, [data-theme="paper"] {
+  --bg:#eef1f4; --bg-elevated:#ffffff; --bg-inset:#e3e8ee; --text:#1b2430; --text-muted:#5b6675;
+  --border:#cdd5df; --accent:#3454d1; --accent-contrast:#ffffff; --accent-2:#d98e3f;
+  --success:#3f8f5f; --error:#c1443c;
+  --code-key:#2547b8; --code-string:#3f8f5f; --code-number:#ab6a17; --code-bool:#a041c2; --code-punct:#7c8798;
+  --shadow:0 8px 24px rgba(27,36,48,.08);
+}
+[data-theme="ink"] {
+  --bg:#10151d; --bg-elevated:#171e29; --bg-inset:#1e2733; --text:#e6ebf2; --text-muted:#8b98a9;
+  --border:#2b3542; --accent:#6d8bff; --accent-contrast:#0b0f16; --accent-2:#e3a45c;
+  --success:#6fcf97; --error:#ef7169;
+  --code-key:#8fa8ff; --code-string:#7fd3a3; --code-number:#e3a45c; --code-bool:#cd8ef0; --code-punct:#6b7788;
+  --shadow:0 10px 28px rgba(0,0,0,.45);
+}
+[data-theme="dracula"] {
+  --bg:#282a36; --bg-elevated:#2f3140; --bg-inset:#21222c; --text:#f8f8f2; --text-muted:#a9abc0;
+  --border:#44475a; --accent:#bd93f9; --accent-contrast:#1e1f29; --accent-2:#ffb86c;
+  --success:#50fa7b; --error:#ff5555;
+  --code-key:#8be9fd; --code-string:#f1fa8c; --code-number:#ffb86c; --code-bool:#ff79c6; --code-punct:#6272a4;
+  --shadow:0 10px 28px rgba(0,0,0,.5);
+}
+[data-theme="nord"] {
+  --bg:#2e3440; --bg-elevated:#3b4252; --bg-inset:#272c37; --text:#eceff4; --text-muted:#a7b0c0;
+  --border:#4c566a; --accent:#88c0d0; --accent-contrast:#2e3440; --accent-2:#ebcb8b;
+  --success:#a3be8c; --error:#bf616a;
+  --code-key:#81a1c1; --code-string:#a3be8c; --code-number:#d08770; --code-bool:#b48ead; --code-punct:#7686a0;
+  --shadow:0 10px 28px rgba(0,0,0,.4);
+}
+[data-theme="solarized-light"] {
+  --bg:#fdf6e3; --bg-elevated:#fffaf0; --bg-inset:#eee8d5; --text:#073642; --text-muted:#657b83;
+  --border:#d9cfae; --accent:#268bd2; --accent-contrast:#fdf6e3; --accent-2:#cb4b16;
+  --success:#859900; --error:#dc322f;
+  --code-key:#268bd2; --code-string:#2aa198; --code-number:#cb4b16; --code-bool:#6c71c4; --code-punct:#93a1a1;
+  --shadow:0 8px 22px rgba(7,54,66,.08);
+}
+[data-theme="solarized-dark"] {
+  --bg:#002b36; --bg-elevated:#073642; --bg-inset:#00212a; --text:#eee8d5; --text-muted:#93a1a1;
+  --border:#0e4a58; --accent:#2aa198; --accent-contrast:#002b36; --accent-2:#b58900;
+  --success:#859900; --error:#dc322f;
+  --code-key:#268bd2; --code-string:#2aa198; --code-number:#cb4b16; --code-bool:#6c71c4; --code-punct:#5c7679;
+  --shadow:0 10px 26px rgba(0,0,0,.4);
+}
+[data-theme="monokai"] {
+  --bg:#272822; --bg-elevated:#2f302a; --bg-inset:#1e1f1a; --text:#f8f8f2; --text-muted:#a2a48d;
+  --border:#49493f; --accent:#66d9ef; --accent-contrast:#1b1c17; --accent-2:#fd971f;
+  --success:#a6e22e; --error:#f92672;
+  --code-key:#66d9ef; --code-string:#e6db74; --code-number:#ae81ff; --code-bool:#fd971f; --code-punct:#75715e;
+  --shadow:0 10px 26px rgba(0,0,0,.45);
+}
+[data-theme="gruvbox"] {
+  --bg:#282828; --bg-elevated:#32302f; --bg-inset:#1d2021; --text:#ebdbb2; --text-muted:#a89984;
+  --border:#504945; --accent:#83a598; --accent-contrast:#1d2021; --accent-2:#d79921;
+  --success:#b8bb26; --error:#fb4934;
+  --code-key:#83a598; --code-string:#b8bb26; --code-number:#d3869b; --code-bool:#fe8019; --code-punct:#928374;
+  --shadow:0 10px 26px rgba(0,0,0,.4);
+}
+[data-theme="one-dark"] {
+  --bg:#282c34; --bg-elevated:#2f333d; --bg-inset:#21252b; --text:#dcdfe4; --text-muted:#8b93a1;
+  --border:#3e4451; --accent:#61afef; --accent-contrast:#1b1e24; --accent-2:#e5c07b;
+  --success:#98c379; --error:#e06c75;
+  --code-key:#61afef; --code-string:#98c379; --code-number:#d19a66; --code-bool:#c678dd; --code-punct:#5c6370;
+  --shadow:0 10px 26px rgba(0,0,0,.4);
+}
+[data-theme="github-light"] {
+  --bg:#f6f8fa; --bg-elevated:#ffffff; --bg-inset:#eef1f4; --text:#1f2328; --text-muted:#59636e;
+  --border:#d0d7de; --accent:#0969da; --accent-contrast:#ffffff; --accent-2:#9a6700;
+  --success:#1a7f37; --error:#cf222e;
+  --code-key:#0550ae; --code-string:#0a7d33; --code-number:#953800; --code-bool:#8250df; --code-punct:#6e7781;
+  --shadow:0 6px 18px rgba(31,35,40,.08);
+}
+[data-theme="cyberpunk"] {
+  --bg:#0d0221; --bg-elevated:#170a33; --bg-inset:#0a0119; --text:#f4f0ff; --text-muted:#a08fd6;
+  --border:#3a1f6b; --accent:#ff2e97; --accent-contrast:#0d0221; --accent-2:#21e6c1;
+  --success:#21e6c1; --error:#ff5470;
+  --code-key:#21e6c1; --code-string:#ffde59; --code-number:#ff8906; --code-bool:#ff2e97; --code-punct:#7a6bab;
+  --shadow:0 0 30px rgba(255,46,151,.25);
+}
+[data-theme="forest"] {
+  --bg:#1c2a1e; --bg-elevated:#223526; --bg-inset:#16211a; --text:#e8f0e6; --text-muted:#9db29a;
+  --border:#34462f; --accent:#7fb069; --accent-contrast:#16211a; --accent-2:#d9a441;
+  --success:#8bc78e; --error:#d9694f;
+  --code-key:#9dcf8a; --code-string:#d9a441; --code-number:#e0c097; --code-bool:#c78e5a; --code-punct:#66795f;
+  --shadow:0 10px 26px rgba(0,0,0,.35);
+}
+
+/* ---------- Base ---------- */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  min-height: 100vh; display: flex; flex-direction: column; position: relative; overflow-x: hidden;
+}
+h1, h2 { margin: 0; }
+.visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+.muted { color: var(--text-muted); font-size: .85rem; }
+
+.bracket-mark {
+  position: fixed; top: -4vw; right: -2vw; font-family: "IBM Plex Mono", monospace; font-weight: 700;
+  font-size: 26vw; line-height: 1; color: var(--accent); opacity: .05; pointer-events: none; z-index: 0; user-select: none;
+}
+
+/* ---------- Top bar ---------- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border); position: relative; z-index: 2; flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: .75rem; }
+.brand-mark {
+  font-family: "IBM Plex Mono", monospace; font-weight: 700; font-size: 1.5rem; color: var(--accent);
+  background: var(--bg-inset); border: 1px solid var(--border); border-radius: 8px; padding: .1rem .5rem;
+}
+.brand-text h1 { font-size: 1.2rem; letter-spacing: -.01em; }
+.brand-text p { margin: .1rem 0 0; font-size: .8rem; color: var(--text-muted); }
+.topbar-controls { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+
+/* ---------- Buttons & fields ---------- */
+.btn {
+  font-family: inherit; font-size: .88rem; font-weight: 500; padding: .5rem .85rem; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text); cursor: pointer;
+  transition: transform .08s ease, border-color .15s ease, background .15s ease; white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); }
+.btn:active { transform: scale(.97); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn-small { padding: .4rem .65rem; font-size: .82rem; }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: var(--bg-inset); border-color: var(--border); }
+.btn-primary { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); font-weight: 600; }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn.active { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+.count-pill {
+  background: var(--accent); color: var(--accent-contrast); border-radius: 999px; font-size: .72rem;
+  padding: .05rem .42rem; margin-left: .15rem; font-weight: 700;
+}
+select, input[type="text"] {
+  font-family: inherit; font-size: .85rem; padding: .48rem .7rem; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text);
+}
+select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.theme-select-wrap select { min-width: 9rem; }
+
+/* ---------- Layout: input on top, output below — reads top to bottom ---------- */
+.workspace {
+  flex: 1; display: flex; flex-direction: column; gap: 1rem; padding: 1rem 1.5rem;
+  position: relative; z-index: 1; max-width: 1600px; width: 100%; margin: 0 auto;
+  min-height: 0;
+}
+.pane {
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden;
+  flex: 1 1 0; min-height: 280px;
+}
+.pane.pane-fullscreen {
+  position: fixed; inset: 0; z-index: 35; border-radius: 0; max-width: none; width: 100vw; height: 100vh; margin: 0;
+}
+body.no-scroll { overflow: hidden; }
+body.no-scroll .topbar,
+body.no-scroll .pagefoot {
+  visibility: hidden;
+  pointer-events: none;
+}
+.pane-head {
+  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+  padding: .85rem 1rem; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+}
+.pane-head h2 { font-size: .95rem; font-weight: 600; }
+.pane-head-actions { display: flex; gap: .5rem; align-items: center; }
+#filterInput { width: 12rem; }
+
+textarea#inputArea {
+  resize: none; border: none; background: transparent; color: var(--text);
+  font-family: "IBM Plex Mono", monospace; font-size: .95rem; line-height: 1.6; padding: 1rem;
+  flex: 1; min-height: 0; width: 100%; display: block;
+}
+
+.input-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: .85rem 1rem; border-top: 1px solid var(--border); flex-wrap: wrap;
+}
+
+.status-line {
+  padding: .55rem 1rem; font-size: .85rem; min-height: 2.1rem; display: flex; align-items: center;
+}
+.status-line.ok { color: var(--success); }
+.status-line.err { color: var(--error); }
+
+.output-toolbar {
+  display: flex; align-items: center; gap: .5rem; padding: .6rem 1rem;
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); flex-wrap: wrap;
+}
+.toolbar-spacer { flex: 1; }
+
+.json-view {
+  margin: 0; padding: 1rem; overflow: auto; flex: 1; min-height: 0;
+  font-family: "IBM Plex Mono", monospace; font-size: .92rem; line-height: 1.6; background: var(--bg-inset);
+}
+.json-view .placeholder { color: var(--text-muted); font-style: italic; }
+.tok-key { color: var(--code-key); }
+.tok-string { color: var(--code-string); }
+.tok-number { color: var(--code-number); }
+.tok-bool, .tok-null { color: var(--code-bool); }
+.tok-punct { color: var(--code-punct); }
+.tok-match { background: var(--accent-2); color: #1b1b1b; border-radius: 3px; }
+
+/* ---------- History panel ---------- */
+.history-panel {
+  position: fixed; top: 0; right: -22rem; width: 21rem; max-width: 90vw; height: 100%;
+  background: var(--bg-elevated); border-left: 1px solid var(--border); box-shadow: var(--shadow);
+  z-index: 20; display: flex; flex-direction: column; transition: right .25s ease;
+}
+.history-panel.open { right: 0; }
+.history-head { display: flex; align-items: center; gap: .5rem; padding: 1rem; border-bottom: 1px solid var(--border); }
+.history-head h2 { flex: 1; font-size: 1.05rem; }
+.history-sub { margin: .8rem 1rem; font-size: .8rem; color: var(--text-muted); }
+.history-list { list-style: none; margin: 0; padding: 0 .75rem 1rem; overflow-y: auto; flex: 1; }
+.history-item {
+  border: 1px solid var(--border); border-radius: 9px; padding: .6rem .7rem; margin-bottom: .6rem;
+  cursor: pointer; transition: border-color .15s ease;
+}
+.history-item:hover { border-color: var(--accent); }
+.history-item-top { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-bottom: .3rem; }
+.history-item-time { font-size: .72rem; color: var(--text-muted); }
+.history-item-del { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: .85rem; padding: .1rem .3rem; }
+.history-item-del:hover { color: var(--error); }
+.history-item-preview {
+  font-family: "IBM Plex Mono", monospace; font-size: .78rem; color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.history-empty { color: var(--text-muted); font-size: .85rem; padding: .5rem .2rem; }
+.history-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 19; }
+
+/* ---------- Diff / compare modal ---------- */
+.modal-overlay { position: fixed; inset: 0; background: rgba(10,14,20,.45); z-index: 39; }
+.diff-modal {
+  display: none; position: fixed; inset: 2rem; z-index: 40; background: var(--bg-elevated);
+  border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);
+  flex-direction: column; overflow: hidden;
+}
+.diff-modal.open { display: flex; }
+.diff-modal-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: .9rem 1.25rem; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+}
+.diff-modal-head h2 { font-size: 1.05rem; }
+.diff-modal-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.diff-legend { display: flex; align-items: center; gap: .9rem; font-size: .78rem; color: var(--text-muted); }
+.diff-swatch { display: inline-block; width: .8rem; height: .8rem; border-radius: 3px; margin-right: .3rem; vertical-align: -1px; }
+.diff-swatch.diff-add { background: var(--success); opacity: .45; }
+.diff-swatch.diff-remove { background: var(--error); opacity: .45; }
+.diff-body { flex: 1; overflow: auto; padding: .5rem 0; }
+.diff-line {
+  display: flex; gap: .75rem; padding: .1rem 1.25rem; white-space: pre-wrap; word-break: break-word;
+  font-family: "IBM Plex Mono", monospace; font-size: .85rem; line-height: 1.55;
+}
+.diff-line .diff-marker { flex: 0 0 1.1rem; color: var(--text-muted); user-select: none; }
+.diff-line.diff-add { background: color-mix(in srgb, var(--success) 16%, transparent); }
+.diff-line.diff-remove { background: color-mix(in srgb, var(--error) 16%, transparent); }
+.diff-empty { padding: 2rem 1.25rem; color: var(--text-muted); font-size: .9rem; }
+
+.pagefoot { text-align: center; padding: .5rem; font-size: .76rem; color: var(--text-muted); position: relative; z-index: 1; }
+
+@media (max-width: 560px) {
+  #filterInput { width: 8rem; }
+  .pane-head { flex-direction: column; align-items: stretch; }
+  .pane-head-actions { justify-content: space-between; }
+}
+</style>
+</head>
+<body>
+
+<div class="bracket-mark" aria-hidden="true">{ }</div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">{ }</span>
+    <div class="brand-text">
+      <h1>Loosely</h1>
+      <p>Turn any string into JSON</p>
+    </div>
+  </div>
+  <div class="topbar-controls">
+    <button id="historyToggle" class="btn btn-ghost" aria-expanded="false" aria-controls="historyPanel">
+      History <span id="historyCount" class="count-pill">0</span>
+    </button>
+    <label class="theme-select-wrap">
+      <span class="visually-hidden">Theme</span>
+      <select id="themeSelect" aria-label="Choose theme"></select>
+    </label>
+  </div>
+</header>
+
+<main class="workspace">
+
+  <section class="pane" id="inputPane" aria-labelledby="inputLabel">
+    <div class="pane-head">
+      <h2 id="inputLabel">1. Paste your text</h2>
+      <div class="pane-head-actions">
+        <button id="sampleBtn" class="btn btn-ghost btn-small">Try an example</button>
+        <button id="clearInputBtn" class="btn btn-ghost btn-small">Clear</button>
+        <button id="inputFullscreenBtn" class="btn btn-ghost btn-small" aria-label="View input fullscreen">⛶ Fullscreen</button>
+      </div>
+    </div>
+    <textarea id="inputArea" spellcheck="false" placeholder="Paste anything — a JS object literal, single-quoted keys, Python-style True/False/None, trailing commas, or just plain text. Loosely will do its best to turn it into valid JSON."></textarea>
+    <div class="input-footer">
+      <span id="charCount" class="muted">0 characters</span>
+      <button id="convertBtn" class="btn btn-primary">Convert to JSON →</button>
+    </div>
+  </section>
+
+  <div id="statusLine" class="status-line" role="status" aria-live="polite"></div>
+
+  <section class="pane" id="outputPane" aria-labelledby="outputLabel">
+    <div class="pane-head">
+      <h2 id="outputLabel">2. Your JSON</h2>
+      <div class="pane-head-actions">
+        <input id="filterInput" type="text" placeholder="Filter keys or values…" aria-label="Filter JSON by key or value">
+        <button id="filterClearBtn" class="btn btn-ghost btn-small" title="Clear filter">✕</button>
+        <button id="outputFullscreenBtn" class="btn btn-ghost btn-small" aria-label="View output fullscreen">⛶ Fullscreen</button>
+      </div>
+    </div>
+    <div class="output-toolbar">
+      <button id="formatBtn" class="btn btn-small" data-mode="format">2-space format</button>
+      <button id="minifyBtn" class="btn btn-small" data-mode="minify">Minify</button>
+      <span class="toolbar-spacer"></span>
+      <button id="diffBtn" class="btn btn-small">Compare input ↔ output</button>
+      <button id="copyBtn" class="btn btn-small">Copy</button>
+      <button id="exportBtn" class="btn btn-small">Export .json</button>
+    </div>
+    <pre id="outputView" class="json-view" tabindex="0"><code id="outputCode"><span class="placeholder">Your converted JSON will show up here.</span></code></pre>
+  </section>
+
+</main>
+
+<aside id="historyPanel" class="history-panel" aria-label="Parse history" aria-hidden="true">
+  <div class="history-head">
+    <h2>History</h2>
+    <button id="historyClearBtn" class="btn btn-ghost btn-small">Clear all</button>
+    <button id="historyCloseBtn" class="btn btn-ghost btn-small" aria-label="Close history">✕</button>
+  </div>
+  <p class="history-sub">Every string that successfully parsed is kept here, newest first, in your browser only.</p>
+  <ul id="historyList" class="history-list"></ul>
+</aside>
+<div id="historyOverlay" class="history-overlay" hidden></div>
+
+<div id="diffOverlay" class="modal-overlay" hidden></div>
+<section id="diffModal" class="diff-modal" aria-hidden="true" aria-label="Compare input and output">
+  <div class="diff-modal-head">
+    <div>
+      <h2>Compare input → output</h2>
+      <p class="muted" style="margin:.15rem 0 0;">Input is shown as the parser actually read it (typos like a missing quote get fixed) and reflowed one field per line so it lines up with the output.</p>
+    </div>
+    <div class="diff-modal-actions">
+      <span class="diff-legend">
+        <span><span class="diff-swatch diff-remove"></span>only in input</span>
+        <span><span class="diff-swatch diff-add"></span>only in output</span>
+      </span>
+      <button id="diffCloseBtn" class="btn btn-ghost btn-small" aria-label="Close compare view">✕ Close</button>
+    </div>
+  </div>
+  <div id="diffBody" class="diff-body"></div>
+</section>
+
+<footer class="pagefoot">
+  <p>Runs entirely in your browser. Nothing you paste is sent anywhere.</p>
+</footer>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ============ Themes ============ */
+  const THEMES = [
+    { id: "paper", label: "Paper (default)" },
+    { id: "ink", label: "Ink" },
+    { id: "dracula", label: "Dracula" },
+    { id: "nord", label: "Nord" },
+    { id: "solarized-light", label: "Solarized Light" },
+    { id: "solarized-dark", label: "Solarized Dark" },
+    { id: "monokai", label: "Monokai" },
+    { id: "gruvbox", label: "Gruvbox" },
+    { id: "one-dark", label: "One Dark" },
+    { id: "github-light", label: "GitHub Light" },
+    { id: "cyberpunk", label: "Cyberpunk" },
+    { id: "forest", label: "Forest" },
+  ];
+  const THEME_KEY = "loosely_theme";
+  const themeSelect = document.getElementById("themeSelect");
+  THEMES.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t.id; opt.textContent = t.label;
+    themeSelect.appendChild(opt);
+  });
+  function applyTheme(id) {
+    document.documentElement.setAttribute("data-theme", id);
+    themeSelect.value = id;
+    try { localStorage.setItem(THEME_KEY, id); } catch (e) {}
+  }
+  themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+  applyTheme((() => { try { return localStorage.getItem(THEME_KEY) || "paper"; } catch (e) { return "paper"; } })());
+
+  /* ============ Elements ============ */
+  const inputArea = document.getElementById("inputArea");
+  const charCount = document.getElementById("charCount");
+  const convertBtn = document.getElementById("convertBtn");
+  const clearInputBtn = document.getElementById("clearInputBtn");
+  const sampleBtn = document.getElementById("sampleBtn");
+  const statusLine = document.getElementById("statusLine");
+  const outputCode = document.getElementById("outputCode");
+  const formatBtn = document.getElementById("formatBtn");
+  const minifyBtn = document.getElementById("minifyBtn");
+  const copyBtn = document.getElementById("copyBtn");
+  const exportBtn = document.getElementById("exportBtn");
+  const filterInput = document.getElementById("filterInput");
+  const filterClearBtn = document.getElementById("filterClearBtn");
+  const historyToggle = document.getElementById("historyToggle");
+  const historyPanel = document.getElementById("historyPanel");
+  const historyOverlay = document.getElementById("historyOverlay");
+  const historyList = document.getElementById("historyList");
+  const historyCount = document.getElementById("historyCount");
+  const historyClearBtn = document.getElementById("historyClearBtn");
+  const historyCloseBtn = document.getElementById("historyCloseBtn");
+  const inputPane = document.getElementById("inputPane");
+  const outputPane = document.getElementById("outputPane");
+  const inputFullscreenBtn = document.getElementById("inputFullscreenBtn");
+  const outputFullscreenBtn = document.getElementById("outputFullscreenBtn");
+  const diffBtn = document.getElementById("diffBtn");
+  const diffModal = document.getElementById("diffModal");
+  const diffOverlay = document.getElementById("diffOverlay");
+  const diffCloseBtn = document.getElementById("diffCloseBtn");
+  const diffBody = document.getElementById("diffBody");
+
+  /* ============ State ============ */
+  let currentData = null;
+  let hasResult = false;
+  let viewMode = "format";
+  let lastDiffSource = ""; // the exact text that actually parsed, for a reliable diff view
+
+  inputArea.addEventListener("input", () => {
+    charCount.textContent = `${inputArea.value.length} characters`;
+  });
+
+  /* ============ Lenient "anything -> JSON" parser ============ */
+  function tryLenientParse(raw) {
+    const input = raw.trim();
+
+    if (!input) return null;
+
+    // --------------------------------------------------
+    // 1. Normal JSON
+    // --------------------------------------------------
+    try {
+      const direct = JSON.parse(input);
+
+      // A valid JSON string whose contents themselves look like an
+      // object/array (e.g. "{'name': 'John'}") is almost always meant
+      // to be unwrapped one more level, not treated as final text.
+      if (typeof direct === "string" && /^\s*[{[]/.test(direct)) {
+        const inner = tryLenientParse(direct);
+        if (inner !== null && typeof inner.value !== "string") {
+          return { value: inner.value, note: "Parsed the outer JSON string, then parsed the structure found inside it.", source: inner.source };
+        }
+      }
+
+      return { value: direct, note: null, source: input };
+    } catch (e) {}
+
+    // --------------------------------------------------
+    // 1.1 Generic tolerant extraction — find the first { or [
+    //     anywhere in the text and read a valid value from there,
+    //     discarding whatever noise surrounds it.
+    // --------------------------------------------------
+    const extracted = extractJsonAnywhere(input);
+
+    if (extracted !== null) {
+      return {
+        value: extracted.value,
+        note: "Found and extracted a JSON structure from within the text.",
+        source: extracted.source
+      };
+    }
+
+    // --------------------------------------------------
+    // 2. Outer single/double quote wrapping
+    //
+    // Example:
+    // '{"order_number": "..."}'
+    //
+    // becomes:
+    // {"order_number": "..."}
+    // --------------------------------------------------
+    const unwrapped = unwrapOuterQuotes(input);
+
+    if (unwrapped !== null) {
+      const inner = unwrapped.trim();
+
+      // Try the unwrapped content directly.
+      try {
+        return {
+          value: JSON.parse(inner),
+          note: "Removed the surrounding quotes and parsed the JSON inside.",
+          source: inner
+        };
+      } catch (e) {}
+
+      // Try repairing the unwrapped JSON.
+      const repairedInner = repairUnbalancedBrackets(inner);
+
+      if (repairedInner !== null) {
+        try {
+          return {
+            value: JSON.parse(repairedInner),
+            note: "Removed the surrounding quotes and repaired the JSON structure.",
+            source: repairedInner
+          };
+        } catch (e) {}
+      }
+
+      // The inner value might itself be JS/Python-style.
+      const innerJs = normalizeJsLike(inner);
+
+      try {
+        const value = evaluateLiteral(innerJs);
+
+        if (value !== undefined) {
+          return {
+            value: normalizeValue(value),
+            note: "Removed the surrounding quotes and interpreted the contents as a JavaScript literal.",
+            source: innerJs
+          };
+        }
+      } catch (e) {}
+    }
+
+    // --------------------------------------------------
+    // 3. Clean comments / trailing commas
+    // --------------------------------------------------
+    let cleaned = stripComments(input);
+    cleaned = stripTrailingCommas(cleaned);
+
+    try {
+      return {
+        value: JSON.parse(cleaned),
+        note: "Removed comments / trailing commas.",
+        source: cleaned
+      };
+    } catch (e) {}
+
+    // --------------------------------------------------
+    // 3.1 Escape unescaped quotes inside string values
+    // --------------------------------------------------
+    const quoteFixed = repairUnescapedValueQuotes(cleaned);
+
+    if (quoteFixed !== null) {
+      try {
+        return {
+          value: JSON.parse(quoteFixed),
+          note: "Escaped stray quotes found inside string values.",
+          source: quoteFixed
+        };
+      } catch (e) {}
+
+      // In case brackets were also off, try both repairs together.
+      const repairedBoth = repairUnbalancedBrackets(quoteFixed);
+      if (repairedBoth !== null) {
+        try {
+          return {
+            value: JSON.parse(repairedBoth),
+            note: "Escaped stray quotes and repaired bracket structure.",
+            source: repairedBoth
+          };
+        } catch (e) {}
+      }
+    }
+
+    // --------------------------------------------------
+    // 4. Repair incomplete JSON
+    // --------------------------------------------------
+    const repaired = repairUnbalancedBrackets(cleaned);
+
+    if (repaired !== null) {
+      try {
+        return {
+          value: JSON.parse(repaired),
+          note: "Repaired missing or mismatched brackets.",
+          source: repaired
+        };
+      } catch (e) {}
+    }
+
+    // --------------------------------------------------
+    // 5. JavaScript / Python-style object
+    // --------------------------------------------------
+    const jsLike = normalizeJsLike(cleaned);
+
+    try {
+      const value = evaluateLiteral(jsLike);
+
+      if (value !== undefined) {
+        return {
+          value: normalizeValue(value),
+          note: "Interpreted as a JavaScript literal (quotes/keys/commas normalized).",
+          source: jsLike
+        };
+      }
+    } catch (e) {}
+
+    // --------------------------------------------------
+    // 6. Repair JS-like object and try again
+    // --------------------------------------------------
+    const repairedJs = repairUnbalancedBrackets(jsLike);
+
+    if (repairedJs !== null) {
+      try {
+        const value = evaluateLiteral(repairedJs);
+
+        if (value !== undefined) {
+          return {
+            value: normalizeValue(value),
+            note: "Repaired the structure and interpreted it as a JavaScript literal.",
+            source: repairedJs
+          };
+        }
+      } catch (e) {}
+    }
+
+    // --------------------------------------------------
+    // 7. Bare literals
+    // --------------------------------------------------
+    if (/^(true|false|null)$/i.test(input)) {
+      return {
+        value: JSON.parse(input.toLowerCase()),
+        note: "Interpreted as a bare literal.",
+        source: input
+      };
+    }
+
+    if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(input)) {
+      return {
+        value: JSON.parse(input),
+        note: "Interpreted as a bare number.",
+        source: input
+      };
+    }
+
+    // --------------------------------------------------
+    // 8. Plain text
+    // --------------------------------------------------
+    return {
+      value: raw,
+      note: "Couldn't detect JSON structure — wrapped your text as a plain JSON string.",
+      source: raw
+    };
+  }
+  // Strips one layer of matching outer quotes ('...' or "...") from a
+  // trimmed string, unescaping the interior. Returns null if the string
+  // isn't wrapped in quotes at all.
+  function unwrapOuterQuotes(input) {
+    const trimmed = input.trim();
+
+    if (trimmed.length < 2) return null;
+
+    const first = trimmed[0];
+    const last = trimmed[trimmed.length - 1];
+
+    // Double quoted outer string
+    if (first === '"' && last === '"') {
+      try {
+        return JSON.parse(trimmed);
+      } catch (e) {
+        return trimmed
+          .slice(1, -1)
+          .replace(/\\"/g, '"')
+          .replace(/\\\\/g, "\\");
+      }
+    }
+
+    // Single quoted outer string
+    //
+    // Example:
+    // '{"order_number": "..."}'
+    //
+    // We DON'T use JSON.parse here because JSON does not
+    // allow single quotes around the complete document.
+    if (first === "'" && last === "'") {
+      return trimmed
+        .slice(1, -1)
+        .replace(/\\'/g, "'")
+        .replace(/\\"/g, '"')
+        .replace(/\\\\/g, "\\");
+    }
+
+    return null;
+  }
+  // Catches an object key that's missing its OPENING quote — a common paste
+  // corruption — e.g. `..., awb_number': '123', ...` becomes
+  // `..., 'awb_number': '123', ...`. Only matches a bareword sitting right
+  // after `{`/`,` that's immediately followed by a stray quote + colon, so
+  // it never touches an already-quoted key or a legitimate bare JS key.
+  function repairMissingKeyQuotes(str) {
+    return str.replace(/([{,]\s*)([A-Za-z_$][\w$]*)(["'])(\s*:)/g, (m, pre, word, quote, colon) => pre + quote + word + quote + colon);
+  }
+
+  // Catches string VALUES that contain unescaped inner quotes — common when
+  // pasting things like Django/Jinja template tags: "url": "{% url "x" %}".
+  // A real closing quote for a JSON string value is (almost always) followed
+  // immediately by a comma, closing brace/bracket, or the end of the string.
+  // Anything else is treated as literal text inside the value and escaped.
+  function repairUnescapedValueQuotes(str) {
+    let changed = false;
+    const repaired = str.replace(
+      /"((?:[^"\\]|\\.)*)"\s*:\s*"([\s\S]*?)"(?=\s*(?:,|\}|\]|$))/g,
+      (m, key, value) => {
+        if (/"/.test(value)) {
+          changed = true;
+          const escaped = value.replace(/\\?"/g, '\\"');
+          return `"${key}":"${escaped}"`;
+        }
+        return m;
+      }
+    );
+    return changed ? repaired : null;
+  }
+
+  // Walks the string tracking string literals so it isn't confused by
+  // brackets inside quotes. Drops any stray closing bracket that doesn't
+  // match what's currently open (a likely typo), then appends whatever
+  // closing punctuation is still missing at the end so a truncated or
+  // slightly malformed paste still has a shot at parsing.
+  function repairUnbalancedBrackets(str) {
+    const stack = [];
+    let inStr = null;
+    let out = "";
+    let sawIssue = false;
+
+    for (let i = 0; i < str.length; i++) {
+      const c = str[i];
+
+      // Inside a quoted string
+      if (inStr) {
+        out += c;
+
+        if (c === "\\") {
+          if (i + 1 < str.length) {
+            out += str[i + 1];
+            i++;
+          }
+          continue;
+        }
+
+        if (c === inStr) {
+          inStr = null;
+        }
+
+        continue;
+      }
+
+      // Start string
+      if (c === '"' || c === "'") {
+        inStr = c;
+        out += c;
+        continue;
+      }
+
+      // Opening bracket
+      if (c === "{" || c === "[") {
+        stack.push(c);
+        out += c;
+        continue;
+      }
+
+      // Closing bracket
+      if (c === "}" || c === "]") {
+        const expected = c === "}" ? "{" : "[";
+
+        if (stack.length && stack[stack.length - 1] === expected) {
+          stack.pop();
+          out += c;
+        } else {
+          // Ignore an unexpected closing bracket.
+          sawIssue = true;
+        }
+
+        continue;
+      }
+
+      out += c;
+    }
+
+    // Don't guess if a string itself wasn't closed.
+    if (inStr) {
+      return null;
+    }
+
+    // Nothing to repair.
+    if (stack.length === 0 && !sawIssue) {
+      return null;
+    }
+
+    // Remove trailing comma before auto-closing.
+    out = stripTrailingCommas(out.trimEnd());
+
+    // Close everything that is still open.
+    while (stack.length) {
+      const opening = stack.pop();
+
+      if (opening === "{") {
+        out += "}";
+      } else {
+        out += "]";
+      }
+    }
+
+    return out;
+  }
+
+  function stripComments(str) {
+    let out = "", inStr = null;
+    for (let i = 0; i < str.length; i++) {
+      const c = str[i], n = str[i + 1];
+      if (inStr) {
+        out += c;
+        if (c === "\\") { out += n; i++; continue; }
+        if (c === inStr) inStr = null;
+        continue;
+      }
+      if (c === '"' || c === "'") { inStr = c; out += c; continue; }
+      if (c === "/" && n === "/") { while (i < str.length && str[i] !== "\n") i++; continue; }
+      if (c === "/" && n === "*") { i += 2; while (i < str.length && !(str[i] === "*" && str[i + 1] === "/")) i++; i++; continue; }
+      out += c;
+    }
+    return out;
+  }
+
+  function normalizeJsLike(str) {
+    return repairMissingKeyQuotes(str)
+      .replace(/\bTrue\b/g, "true")
+      .replace(/\bFalse\b/g, "false")
+      .replace(/\bNone\b/g, "null")
+      .replace(/\bundefined\b/g, "null");
+  }
+
+  function evaluateLiteral(str) {
+    const fn = new Function(
+      '"use strict"; return (' + str + "\n);"
+    );
+
+    return fn();
+  }
+
+  function normalizeValue(value) {
+    // Sometimes evaluating a quoted JSON document produces
+    // a string containing JSON.
+    //
+    // Example:
+    // '{"foo": "bar"}'
+    //
+    // => '{"foo": "bar"}'   (string)
+    // => { foo: "bar" }     (object)
+    if (typeof value === "string") {
+      try {
+        return JSON.parse(value);
+      } catch (e) {
+        return value;
+      }
+    }
+
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function stripTrailingCommas(str) { return str.replace(/,\s*([}\]])/g, "$1"); }
+
+  /* ============ Convert action ============ */
+  convertBtn.addEventListener("click", () => runConvert());
+  inputArea.addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") runConvert(); });
+
+  function runConvert() {
+    const raw = inputArea.value;
+    if (!raw.trim()) { setStatus("Paste something first.", "err"); return; }
+    const result = tryLenientParse(raw);
+    if (result === null) { setStatus("Couldn't convert that into JSON.", "err"); return; }
+    currentData = result.value;
+    hasResult = true;
+    lastDiffSource = typeof result.source === "string" ? result.source : raw;
+    viewMode = "format";
+    setActiveModeBtn();
+    filterInput.value = "";
+    renderOutput();
+    setStatus(result.note ? `Converted. ${result.note}` : "Converted to valid JSON.", "ok");
+    addHistoryEntry(raw, currentData);
+  }
+  function setStatus(msg, kind) {
+    statusLine.textContent = msg;
+    statusLine.className = "status-line" + (kind ? " " + kind : "");
+  }
+
+  sampleBtn.addEventListener("click", () => {
+    inputArea.value = `{ name: 'Ada Lovelace', role: "engineer", active: True, langs: ['analytical engine', 'math'], notes: None, awards: 3, }`;
+    charCount.textContent = `${inputArea.value.length} characters`;
+    runConvert();
+  });
+  clearInputBtn.addEventListener("click", () => {
+    inputArea.value = "";
+    charCount.textContent = "0 characters";
+    inputArea.focus();
+  });
+
+  /* ============ Output rendering & syntax highlight ============ */
+  function renderOutput() {
+    if (!hasResult) {
+      outputCode.innerHTML = '<span class="placeholder">Your converted JSON will show up here.</span>';
+      return;
+    }
+    const query = filterInput.value.trim();
+    const dataToShow = query ? filterJson(currentData, query) : currentData;
+
+    if (query && dataToShow === undefined) {
+      outputCode.innerHTML = '<span class="placeholder">No keys or values match "' + escapeHtml(query) + '".</span>';
+      return;
+    }
+    const jsonStr = viewMode === "minify" ? JSON.stringify(dataToShow) : JSON.stringify(dataToShow, null, 2);
+    outputCode.innerHTML = highlight(jsonStr, query);
+  }
+
+  // Highlight directly on the RAW json string, escaping each piece as we go
+  // (fixes the earlier bug where escaping happened first and the highlighter
+  // then looked for entities that were never produced).
+  function highlight(jsonStr, query) {
+    const pattern = /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false)\b|\b(null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|([{}\[\],])/g;
+    let html = "";
+    let lastIndex = 0;
+    let m;
+    while ((m = pattern.exec(jsonStr)) !== null) {
+      html += escapeHtml(jsonStr.slice(lastIndex, m.index));
+      const [full, str, colon, bool, nul, num, punct] = m;
+      if (str) {
+        const cls = colon ? "tok-key" : "tok-string";
+        html += `<span class="${cls}">${escapeHtml(str)}</span>${colon ? escapeHtml(colon) : ""}`;
+      } else if (bool) {
+        html += `<span class="tok-bool">${bool}</span>`;
+      } else if (nul) {
+        html += `<span class="tok-null">${nul}</span>`;
+      } else if (num) {
+        html += `<span class="tok-number">${num}</span>`;
+      } else if (punct) {
+        html += `<span class="tok-punct">${escapeHtml(punct)}</span>`;
+      }
+      lastIndex = pattern.lastIndex;
+    }
+    html += escapeHtml(jsonStr.slice(lastIndex));
+
+    if (query) {
+      const safe = escapeHtml(query).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      html = html.replace(new RegExp("(" + safe + ")", "gi"), '<mark class="tok-match">$1</mark>');
+    }
+    return html;
+  }
+  function escapeHtml(str) {
+    return str.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  /* ============ Filter (prune tree by key/value match) ============ */
+  function filterJson(data, query) {
+    const q = query.toLowerCase();
+    function matches(v) {
+      if (v === null) return "null".includes(q);
+      if (typeof v === "object") return false;
+      return String(v).toLowerCase().includes(q);
+    }
+    function prune(node, keyName) {
+      const keyMatches = keyName !== undefined && String(keyName).toLowerCase().includes(q);
+      if (Array.isArray(node)) {
+        const items = [];
+        node.forEach(item => { const p = prune(item, undefined); if (p !== undefined) items.push(p); });
+        if (items.length > 0 || keyMatches) return items;
+        return undefined;
+      }
+      if (node !== null && typeof node === "object") {
+        const out = {}; let any = false;
+        for (const k of Object.keys(node)) {
+          const childKeyMatches = k.toLowerCase().includes(q);
+          const prunedChild = prune(node[k], k);
+          if (prunedChild !== undefined || childKeyMatches) {
+            out[k] = prunedChild !== undefined ? prunedChild : node[k];
+            any = true;
+          }
+        }
+        if (any || keyMatches) return out;
+        return undefined;
+      }
+      if (matches(node) || keyMatches) return node;
+      return undefined;
+    }
+    return prune(data, undefined);
+  }
+  filterInput.addEventListener("input", renderOutput);
+  filterClearBtn.addEventListener("click", () => { filterInput.value = ""; renderOutput(); });
+
+  /* ============ Format / minify toggle ============ */
+  function setActiveModeBtn() {
+    formatBtn.classList.toggle("active", viewMode === "format");
+    minifyBtn.classList.toggle("active", viewMode === "minify");
+  }
+  formatBtn.addEventListener("click", () => { viewMode = "format"; setActiveModeBtn(); renderOutput(); });
+  minifyBtn.addEventListener("click", () => { viewMode = "minify"; setActiveModeBtn(); renderOutput(); });
+  setActiveModeBtn();
+
+  /* ============ Copy / Export ============ */
+  function currentText() {
+    const query = filterInput.value.trim();
+    const dataToShow = query ? filterJson(currentData, query) : currentData;
+    return viewMode === "minify" ? JSON.stringify(dataToShow) : JSON.stringify(dataToShow, null, 2);
+  }
+  copyBtn.addEventListener("click", async () => {
+    if (!hasResult) { setStatus("Nothing to copy yet.", "err"); return; }
+    try {
+      await navigator.clipboard.writeText(currentText());
+      flashButton(copyBtn, "Copied!");
+    } catch (e) {
+      setStatus("Couldn't copy — your browser blocked clipboard access.", "err");
+    }
+  });
+  exportBtn.addEventListener("click", () => {
+    if (!hasResult) { setStatus("Nothing to export yet.", "err"); return; }
+    const blob = new Blob([currentText()], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "data.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    flashButton(exportBtn, "Exported!");
+  });
+  function flashButton(btn, msg) {
+    const original = btn.textContent;
+    btn.textContent = msg;
+    setTimeout(() => { btn.textContent = original; }, 1200);
+  }
+
+  /* ============ History ============ */
+  const HISTORY_KEY = "loosely_history";
+  const HISTORY_MAX = 30;
+  function loadHistory() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch (e) { return []; } }
+  function saveHistory(list) { try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); } catch (e) {} }
+
+  function addHistoryEntry(raw, data) {
+    const list = loadHistory();
+    const jsonStr = JSON.stringify(data, null, 2);
+    list.unshift({
+      id: Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+      time: new Date().toISOString(),
+      input: raw.length > 4000 ? raw.slice(0, 4000) : raw,
+      json: jsonStr,
+    });
+    while (list.length > HISTORY_MAX) list.pop();
+    saveHistory(list);
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const list = loadHistory();
+    historyCount.textContent = list.length;
+    historyList.innerHTML = "";
+    if (list.length === 0) {
+      historyList.innerHTML = '<li class="history-empty">Nothing parsed yet — successful conversions will land here.</li>';
+      return;
+    }
+    list.forEach(entry => {
+      const li = document.createElement("li");
+      li.className = "history-item";
+      const time = new Date(entry.time);
+      const timeLabel = isNaN(time) ? "" : time.toLocaleString();
+      const preview = entry.input.replace(/\s+/g, " ").trim().slice(0, 90);
+      li.innerHTML = `
+        <div class="history-item-top">
+          <span class="history-item-time">${escapeHtml(timeLabel)}</span>
+          <button class="history-item-del" aria-label="Delete this entry" title="Delete">✕</button>
+        </div>
+        <div class="history-item-preview">${escapeHtml(preview)}</div>
+      `;
+      li.addEventListener("click", (e) => {
+        if (e.target.closest(".history-item-del")) return;
+        inputArea.value = entry.input;
+        charCount.textContent = `${entry.input.length} characters`;
+        currentData = JSON.parse(entry.json);
+        hasResult = true;
+        lastDiffSource = entry.input;
+        viewMode = "format";
+        setActiveModeBtn();
+        filterInput.value = "";
+        renderOutput();
+        setStatus("Loaded from history.", "ok");
+        closeHistory();
+      });
+      li.querySelector(".history-item-del").addEventListener("click", () => {
+        saveHistory(loadHistory().filter(e2 => e2.id !== entry.id));
+        renderHistory();
+      });
+      historyList.appendChild(li);
+    });
+  }
+
+  function openHistory() {
+    historyPanel.classList.add("open");
+    historyPanel.setAttribute("aria-hidden", "false");
+    historyOverlay.hidden = false;
+    historyToggle.setAttribute("aria-expanded", "true");
+  }
+  function closeHistory() {
+    historyPanel.classList.remove("open");
+    historyPanel.setAttribute("aria-hidden", "true");
+    historyOverlay.hidden = true;
+    historyToggle.setAttribute("aria-expanded", "false");
+  }
+  historyToggle.addEventListener("click", () => {
+    historyPanel.classList.contains("open") ? closeHistory() : openHistory();
+  });
+  historyCloseBtn.addEventListener("click", closeHistory);
+  historyOverlay.addEventListener("click", closeHistory);
+  historyClearBtn.addEventListener("click", () => { saveHistory([]); renderHistory(); });
+
+  renderHistory();
+
+  /* ============ Fullscreen pane toggle ============ */
+  function anyPaneFullscreen() { return document.querySelector(".pane-fullscreen") !== null; }
+  function setupFullscreenToggle(btn, paneEl) {
+    btn.addEventListener("click", () => {
+      const isFull = paneEl.classList.toggle("pane-fullscreen");
+      btn.textContent = isFull ? "✕ Exit fullscreen" : "⛶ Fullscreen";
+      document.body.classList.toggle("no-scroll", anyPaneFullscreen() || diffModal.classList.contains("open"));
+    });
+  }
+  function exitAllFullscreen() {
+    document.querySelectorAll(".pane-fullscreen").forEach(p => p.classList.remove("pane-fullscreen"));
+    inputFullscreenBtn.textContent = "⛶ Fullscreen";
+    outputFullscreenBtn.textContent = "⛶ Fullscreen";
+    if (!diffModal.classList.contains("open")) document.body.classList.remove("no-scroll");
+  }
+  setupFullscreenToggle(inputFullscreenBtn, inputPane);
+  setupFullscreenToggle(outputFullscreenBtn, outputPane);
+
+  /* ============ Compare (diff) modal ============ */
+  function openDiff() {
+    if (!hasResult) { setStatus("Convert something first, then compare.", "err"); return; }
+    renderDiff(lastDiffSource, currentText());
+    diffModal.classList.add("open");
+    diffModal.setAttribute("aria-hidden", "false");
+    diffOverlay.hidden = false;
+    document.body.classList.add("no-scroll");
+  }
+  function closeDiff() {
+    diffModal.classList.remove("open");
+    diffModal.setAttribute("aria-hidden", "true");
+    diffOverlay.hidden = true;
+    if (!anyPaneFullscreen()) document.body.classList.remove("no-scroll");
+  }
+  diffBtn.addEventListener("click", openDiff);
+  diffCloseBtn.addEventListener("click", closeDiff);
+  diffOverlay.addEventListener("click", closeDiff);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (diffModal.classList.contains("open")) closeDiff();
+    if (anyPaneFullscreen()) exitAllFullscreen();
+  });
+
+  // Your raw paste is usually one dense line while the output is pretty-
+  // printed across dozens — diffed as-is that's just "1 removed line" vs
+  // "40 added lines", which tells you nothing. This breaks the raw input
+  // onto one line per field/bracket (tracking quotes so it doesn't get
+  // confused by punctuation inside strings) purely so the two sides line
+  // up for a real line-by-line comparison. It doesn't touch the actual
+  // converted value — only this side-by-side view.
+  function softFormatForDiff(str) {
+    let out = "", indent = 0, inStr = null;
+    const pad = () => "  ".repeat(indent);
+    for (let i = 0; i < str.length; i++) {
+      const c = str[i];
+      if (inStr) {
+        out += c;
+        if (c === "\\") { out += str[i + 1] || ""; i++; continue; }
+        if (c === inStr) inStr = null;
+        continue;
+      }
+      if (c === '"' || c === "'") { inStr = c; out += c; continue; }
+      if (c === "{" || c === "[") { out += c; indent++; out += "\n" + pad(); continue; }
+      if (c === "}" || c === "]") { indent = Math.max(0, indent - 1); out += "\n" + pad() + c; continue; }
+      if (c === ",") { out += c + "\n" + pad(); continue; }
+      if (c === ":") { out += ": "; continue; }
+      if (/\s/.test(c)) continue; // drop the original whitespace/newlines — we're re-laying it out
+      out += c;
+    }
+    return out.split("\n").map(l => l.trim()).filter(Boolean).join("\n");
+  }
+
+  // Classic O(n*m) line-based LCS diff — fine for the JSON sizes this tool
+  // is meant for. Falls back gracefully rather than freezing the tab if
+  // someone pastes something huge.
+  function computeUnifiedDiff(a, b) {
+    const linesA = a.split("\n");
+    const linesB = b.split("\n");
+    const n = linesA.length, m = linesB.length;
+    if (n * m > 3000000) return null;
+    const dp = new Array(n + 1);
+    for (let i = 0; i <= n; i++) dp[i] = new Uint32Array(m + 1);
+    for (let i = n - 1; i >= 0; i--) {
+      for (let j = m - 1; j >= 0; j--) {
+        dp[i][j] = linesA[i] === linesB[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+    const ops = [];
+    let i = 0, j = 0;
+    while (i < n && j < m) {
+      if (linesA[i] === linesB[j]) { ops.push({ type: "same", text: linesA[i] }); i++; j++; }
+      else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push({ type: "remove", text: linesA[i] }); i++; }
+      else { ops.push({ type: "add", text: linesB[j] }); j++; }
+    }
+    while (i < n) { ops.push({ type: "remove", text: linesA[i] }); i++; }
+    while (j < m) { ops.push({ type: "add", text: linesB[j] }); j++; }
+    return ops;
+  }
+
+  function renderDiff(rawInput, outputText) {
+    const reflowedInput = softFormatForDiff(rawInput);
+    if (reflowedInput === outputText) {
+      diffBody.innerHTML = '<p class="diff-empty">Input and output are identical — nothing to compare.</p>';
+      return;
+    }
+    const ops = computeUnifiedDiff(reflowedInput, outputText);
+    if (!ops) {
+      diffBody.innerHTML = '<p class="diff-empty">These are too large to diff line-by-line in the browser.</p>';
+      return;
+    }
+    let html = "";
+    ops.forEach(op => {
+      const marker = op.type === "add" ? "+" : op.type === "remove" ? "−" : " ";
+      const cls = op.type === "same" ? "" : " diff-" + op.type;
+      html += `<div class="diff-line${cls}"><span class="diff-marker">${marker}</span><span>${escapeHtml(op.text) || "&nbsp;"}</span></div>`;
+    });
+    diffBody.innerHTML = html;
+  }
+
+  // ---------------------------------------------------------------
+  // Generic tolerant JSON extractor.
+  //
+  // Instead of a new regex/repair pass per "shape" of junk (query
+  // strings, template tags, log prefixes, code assignments...), this
+  // scans for the first "{" or "[" and reads ONE structurally valid
+  // value from there, tracking strings and brackets itself. Anything
+  // before the opening bracket or after its matching close is noise
+  // and gets dropped. If parsing fails at that bracket, it retries at
+  // the next "{"/"[" found further in the string.
+  // ---------------------------------------------------------------
+  function extractJsonAnywhere(str) {
+    for (let i = 0; i < str.length; i++) {
+      if (str[i] !== "{" && str[i] !== "[") continue;
+      const p = new TolerantParser(str, i);
+      let value;
+      try { value = p.parseValue(); } catch (e) { value = undefined; }
+      if (value !== undefined && p.ok) {
+        return { value, source: str.slice(i, p.pos) };
+      }
+    }
+    return null;
+  }
+
+  function TolerantParser(str, pos) { this.str = str; this.pos = pos; this.ok = true; }
+  TolerantParser.prototype.fail = function () { this.ok = false; return undefined; };
+
+  TolerantParser.prototype.skipWs = function () {
+    const s = this.str;
+    while (this.pos < s.length) {
+      const c = s[this.pos];
+      if (/\s/.test(c)) { this.pos++; continue; }
+      if (c === "/" && s[this.pos + 1] === "/") { while (this.pos < s.length && s[this.pos] !== "\n") this.pos++; continue; }
+      if (c === "/" && s[this.pos + 1] === "*") { this.pos += 2; while (this.pos < s.length && !(s[this.pos] === "*" && s[this.pos + 1] === "/")) this.pos++; this.pos += 2; continue; }
+      break;
+    }
+  };
+
+  TolerantParser.prototype.parseValue = function (context) {
+    this.skipWs();
+    const c = this.str[this.pos];
+    if (c === "{") return this.parseObject();
+    if (c === "[") return this.parseArray();
+    if (c === '"' || c === "'") return this.parseString(c, context);
+    return this.parseLiteral();
+  };
+
+  TolerantParser.prototype.parseObject = function () {
+    const out = {}; this.pos++; this.skipWs();
+    if (this.str[this.pos] === "}") { this.pos++; return out; }
+    while (this.ok && this.pos < this.str.length) {
+      this.skipWs();
+      let key;
+      const kc = this.str[this.pos];
+      if (kc === '"' || kc === "'") key = this.parseString(kc);
+      else {
+        const m = /^[A-Za-z_$][\w$]*/.exec(this.str.slice(this.pos));
+        if (!m) return this.fail();
+        key = m[0]; this.pos += m[0].length;
+      }
+      if (key === undefined) return undefined;
+      this.skipWs();
+      if (this.str[this.pos] !== ":") return this.fail();
+      this.pos++;
+      const value = this.parseValue("objectValue");
+      if (!this.ok) return undefined;
+      out[key] = value;
+      this.skipWs();
+      const c = this.str[this.pos];
+      if (c === ",") { this.pos++; this.skipWs(); if (this.str[this.pos] === "}") { this.pos++; return out; } continue; }
+      if (c === "}") { this.pos++; return out; }
+      // Dropped comma: if what follows looks like the start of another
+      // key (a quote or identifier), assume a comma was lost in the
+      // paste and keep going instead of failing the whole object.
+      if (c === '"' || c === "'" || /[A-Za-z_$]/.test(c || "")) { continue; }
+      return this.fail();
+    }
+    return this.fail();
+  };
+
+  TolerantParser.prototype.parseArray = function () {
+    const out = []; this.pos++; this.skipWs();
+    if (this.str[this.pos] === "]") { this.pos++; return out; }
+    while (this.ok && this.pos < this.str.length) {
+      const value = this.parseValue("arrayValue");
+      if (!this.ok) return undefined;
+      out.push(value);
+      this.skipWs();
+      const c = this.str[this.pos];
+      if (c === ",") { this.pos++; this.skipWs(); if (this.str[this.pos] === "]") { this.pos++; return out; } continue; }
+      if (c === "]") { this.pos++; return out; }
+      // Same dropped-comma recovery as objects.
+      if (c === '"' || c === "'" || c === "{" || c === "[" || /[-\d]/.test(c || "") || /[A-Za-z_$]/.test(c || "")) { continue; }
+      return this.fail();
+    }
+    return this.fail();
+  };
+
+  TolerantParser.prototype.parseString = function (quote, context) {
+    const str = this.str; let i = this.pos + 1, out = "";
+    while (i < str.length) {
+      const c = str[i];
+
+      if (c === "\\") {
+        const next = str[i + 1];
+        const known = "ntrbf\"'\\/";
+        if (next !== undefined && known.indexOf(next) !== -1) {
+          out += this.unescape(next);
+          i += 2;
+        } else {
+          // Unrecognized escape (e.g. a Windows path like "C:\Users\...")
+          // — keep the backslash literally instead of dropping it.
+          out += "\\";
+          i += 1;
+        }
+        continue;
+      }
+
+      if (c === quote) {
+        let j = i + 1;
+        while (j < str.length && /\s/.test(str[j])) j++;
+        const next = str[j];
+
+        // Unambiguous terminators: end of input, or a quote clearly
+        // closing a key/value — including two quoted tokens sitting
+        // right next to each other (a dropped comma).
+        if (next === undefined || next === ":" || next === "}" || next === "]" || next === quote) {
+          this.pos = i + 1; return out;
+        }
+
+        if (next === ",") {
+          // A bare comma is ambiguous when the value itself contains
+          // quotes. Only trust it as the real end when what follows
+          // actually looks like a new field/element.
+          const after = str.slice(j + 1);
+          const looksLikeNextField =
+            context === undefined
+              ? true
+              : context === "arrayValue"
+                ? /^\s*("|'|-?\d|\{|\[|true|false|null|True|False|None)/.test(after)
+                : /^\s*("|')[^"']*\1\s*:/.test(after) || /^\s*[A-Za-z_$][\w$]*\s*:/.test(after);
+
+          if (looksLikeNextField) { this.pos = i + 1; return out; }
+        }
+
+        out += c; i++; continue;
+      }
+
+      out += c; i++;
+    }
+    return this.fail();
+  };
+
+  TolerantParser.prototype.unescape = function (c) {
+    switch (c) {
+      case "n": return "\n"; case "t": return "\t"; case "r": return "\r";
+      case "b": return "\b"; case "f": return "\f";
+      case '"': return '"'; case "'": return "'"; case "\\": return "\\"; case "/": return "/";
+      default: return c;
+    }
+  };
+
+  TolerantParser.prototype.parseLiteral = function () {
+    const rest = this.str.slice(this.pos);
+
+    // Grab the full bareword token up to the next structural delimiter
+    // (comma, closing bracket, or whitespace), THEN decide what it is —
+    // rather than failing the whole parse the moment it isn't a clean
+    // number/bool/null. This is what lets corrupted/masked scalars like
+    // `69.XXXXXX0005` or `XXXXXX9011` survive as plain strings instead
+    // of silently breaking the surrounding object.
+    const m = /^[^,}\]\s]+/.exec(rest);
+    if (!m) return this.fail();
+
+    const token = m[0];
+    this.pos += token.length;
+
+    if (/^(true|True)$/.test(token)) return true;
+    if (/^(false|False)$/.test(token)) return false;
+    if (/^(null|None|undefined)$/.test(token)) return null;
+    if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(token)) return Number(token);
+
+    // Doesn't match any known literal shape — treat as a string rather
+    // than failing the parse.
+    return token;
+    };
+})();
+</script>
+</body>
+</html>
